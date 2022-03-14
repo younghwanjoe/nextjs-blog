@@ -1,16 +1,13 @@
 ---
-name: Tails Azimuth
-avatar: /static/images/avatar.png
-occupation: Professor of Atmospheric Science
-company: Stanford University
-email: address@yoursite.com
-twitter: https://twitter.com/Twitter
-linkedin: https://www.linkedin.com
-github: https://github.com
+name: YoungHwan Joe
+avatar: /static/images/avatar.jpg
+occupation: Frontend Engineer
+email: younghwanjoe@gmail.com
+linkedin: https://www.linkedin.com/in/younghwanjoe
+github: https://github.com/younghwanjoe
 ---
 
-Tails Azimuth is a professor of atmospheric sciences at the Stanford AI Lab. His research interests includes complexity modelling of tailwinds, headwinds and crosswinds.
-
-He leads the clean energy group which develops 3D air pollution-climate models, writes differential equation solvers, and manufactures titanium plated air ballons. In his free time he bakes raspberry pi.
-
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed neque elit, tristique placerat feugiat ac, facilisis vitae arcu. Proin eget egestas augue. Praesent ut sem nec arcu pellentesque aliquet. Duis dapibus diam vel metus tempus vulputate.
+안녕하세요. 프론트엔드 개발을 하는 조영환입니다. <br/>
+이곳은 제가 개발하면서 공부한 내용을 정리 및 공유하기 위해 만들어진 블로그입니다. <br/>
+이곳의 게시글이 도움이 되셨으면 좋겠습니다. <br/>
+게시글의 댓글은 언제든지 환영합니다.
