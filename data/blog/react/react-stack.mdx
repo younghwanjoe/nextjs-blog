@@ -1,0 +1,170 @@
+---
+title: 사내 React 도입을 위한 기술스택 정리
+date: '2021-06-15'
+lastmod: '2021-06-15'
+tags: ['react']
+draft: false
+summary: 사내 React 도입을 위한 기술스택을 정리한 글입니다.
+authors: ['default']
+---
+
+최근 프론트엔드 팀 내에서 신사업 프로젝트의 프론트엔드 프레임워크로 React 도입에 대한 논의가 있었습니다. 현존하는 프로젝트는 대부분 Vue를 기반으로 하고 있기 때문에 React 간단한 데모 프로젝트를 만들어보고 도입에 대한 효용성을 확인하는 과정이 있으면 좋을 것 같다는 의견이 있었는데요. 데모 프로젝트 진행에 앞서 러닝커브가 있거나 도입 여부를 고민할만한 기술 스택에 대해 정리해보았습니다.
+
+# Bundler
+
+번들러를 정하는 과정에서 Vite와 Snowpack를 사용해봐도 좋겠다는 크루분들의 의견이 있었고 그 중 Vite에 관한 설명입니다
+
+## Vite
+
+Vite('비트',프랑스어 발음이라네요)는 webpack이나 rollup같은 번들러와는 좀 다른 도구인데요, 메인 자바스크립트 소스가 있고 관련 자바스크립트 모듈들은 모두 하나로 합쳐서 아웃풋 포인트에 결과물을 만드는 것이 기본적인 번들러의 개념입니다. SPA는 프로젝트 규모가 커지면 덩달아 추가되는 라이브러리 갯수가 늘어나고 결과적으로 번들러의 크기가 커져 초기 렌더링 시간이나 성능에 신경을 쓸 수 밖에 없습니다. 따라서 코드 스플릿을 사용하게 되는데, 다들 아시겠지만 코드 스플릿은 SPA의 라우팅이 동작하는 기준으로 필요한 컴포넌트들을 메인 번들러에서 분리한뒤 라우팅 진입시 필요한 쪼개진 번들러(Chunk)를 불러오는 방식이죠.
+
+비트는 이러한 스필릿 코드기능이 기본적으로 설정됩니다. 하지만 웹팩에서도 옵션으로 구현가능하기 때문에 좀 더 편리하다고 할 수 있을뿐 결정적인 차이는 아닙니다. 좀 더 결정적인 차이는 빌드 방식인데요. Vite는 결론적으로 rollup을 사용해서 번들링을 합니다. 하지만 esbuild도 사용합니다. 상황에 맞게 둘 다 씁니다.
+
+디펜던시의 경우에는 esbuild로 번들링을 합니다. 그러나 개발자가 작성한 소스코드에 대해서는 rollup으로 번들링합니다. 코드 스플릿이나 css 핸들링은 아직 esbuild가 안정적이지 않기 때문에 rollup을 사용한다고 합니다. esbuild는 아직 안정화단계여서 프로덕션 빌드에서는 웹팩 플러그인 사용을 공식적으로 권장하는 상태이기도 하다는군요. 그러니깐 Vite도 번들을 합니다. 번들링 되지 않은 모듈을 여러개를 죄다 싣는 것은 어쨋거나 비효율적이니까요. HTTP/2통신이 나왔다고해도 마찬가지죠. 그러나 번들 방식을 상황에 맞춰 정해줌으로써 개발 생산성과 최적화 높이도록 설계된 빌더라고 볼 수 있겠습니다.
+
+한가지 특이한점은 진입점이 되는 index.html의 위치를 강제한다는 점인데요, 이는 Vite가 개발환경에서 서버로서도 기동하기 때문에, 프로젝트 루트에 index.html를 엔트리 포인트로서 위치시키도록 합니다. 덕분에 별도의 webpack-dev-server같은 라이브러리 없이도 로컬환경에 개발 서버를 띄우고 HMR을 사용하면서 편리한 개발이 가능합니다. JSX, TSX 기본적으로 사용가능하다는 점에서 별도의 babel 변환이 필요없으니 또 다른 장점입니다. 이 이에도 여러 빌더와는 다르게 기본적으로 Server Side Rendering을 지원한다는 점에서도 차별화된 강점들이 있습니다.
+
+---
+
+# UI Framework
+
+어떤 UI 프레임워크를 사용할지에 대한 고민도 필요하죠. 우선 대세를 좀 살펴봤습니다.
+
+[https://infiniti7.com/top-10-react-js-ui-frameworks-in-2021/](https://infiniti7.com/top-10-react-js-ui-frameworks-in-2021/)
+
+React에서 제일 잘나가는 10개 프레임워크를 정리해놓은 글을 참고했는데, 그 중 네개를 골라 간단히 특징들을 정리해보았습니다.
+
+## **Ant Design**
+
+개인적으로는 ant-design-vue라는 vue를 위한 확장 라이브러리를 사용해본 경험이 있어서 친숙했는데요. 제일 큰 특징은 대개의 UI 프레임워크가 제공하는 그리드 시스템은 보통 12 columns를 기준으로 하는데 Ant Design은 24 columns를 제공합니다. 그러다보니 자연스럽게 페이지 내에서 컴포넌트 영역을 좀 더 세밀하게 조절하는데 장점이 생기는 것 같았습니다. 또한 컴포넌트 구현에 있어서 재사용성을 극대화하려는 점이 보였는데요, 공식 문서에서 제공되는 예제들은 대부분 아주 기본적인 UI Component를 래핑해서 구현하는 형태입니다. 따라서 기본적으로 제공되는 컴포넌트 UI가 그리 많지 않다는게 단점이 될 수 있지만 프레임워크에서 제공되는 UI 컴포넌트들을 확장 혹은 변형해서 사용하는데 최적화되었다고 볼 수 있겠네요.
+
+## **Material UI**
+
+우선 기존 사내의 프로젝트에서 사용하던 Vuetify 프레임워크와 레이아웃이 상당히 흡사하다는 점을 들 수 있습니다. 둘다 마테리얼 디자인을 기반으로 하기때문이겠죠. 마테리얼 디자인은 굉장히 직선적이라고 생각하는데 그래서 그런지 마테리얼 디자인을 사용해서 레이아웃을 구성했을 때 최소한 깔끔한 느낌은 주는 것 같습니다. Material UI는 UI 컴포넌트를 다른 프레임워크보다 많이 제공하는 편인데요, 그래서 웬만한 UI요소들은 Material UI가 제공하는 컴포넌트를 기반으로 약간의 CSS 래핑을 통해 편하게 구현할 수 있는 장점이 있습니다. materaial-ui styles라는 CSS-In-JS 라이브러리(JSS 기반)가 내장되어 있다는 특징도 있습니다.
+
+## **Fluent UI**
+
+우선 Microsoft가 공식 스폰서인것이 눈에 띄네요. 마소라는 이름에서 오는 기대감이 자연스레 생깁니다. Build for one platform or for all이라는 슬로건을 달고 있는데, 크로스 플랫폼 UI에 강점을 가진다고 적혀있습니다. 구현된 UI 컴포넌트들을 보니 단번에 마소와의 관계성이 이해가 됩니다. 간단명료하게, Window10의 UI 요소들입니다. 깔끔하면서도 PC,모바일 크로스 플랫폼에 다 어색하지 않을듯 하네요. 다만 웹 애플리케이션에선 디자인적으로 어색한 면이 있다고 느꼈습니다.
+
+## **React-Bootstrap**
+
+Bootstrap을 React에서 사용하기 편하게 만든 익스텐션이라고 볼 수 있습니다. 오래된 UI계의 강자인 Bootstrap을 기반으로 하는 것이니만큼, 군더더기 없고 다양한 UI 컴포넌들을 제공합니다. 다만 조금 올드하게 느껴질 수 있다는 생각이 들었습니다.
+
+UI프레임워크는 디자인적인 요소가 강하므로 개인적인 선호가 들어갈 수 있고 프로젝트에 참여하는 팀원들의 의견에 따라 변경될 여지가 큽니다. 다만 변경 가능성을 염두에 두고 당장 사용해본다면 개인적으로 Material UI이나 Ant Design 사이에서 고민할 것 같네요. Material UI는 Vuetify와 비슷한 점이 많고 마테리얼 디자인은 웬만하면 깔끔한 레이아웃을 보장한다는 생각이고 Ant Design은 24그리드의 장점과 리액트의 컴포넌트를 적극적으로 재사용하는 방식이 프로젝트 규모가 커질수록 장점으로 작용할 것 같습니다.
+
+---
+
+# CSS-In-JS
+
+React에서 JSX를 사용하는 것은 자연스러운 수순인 것 같습니다. HTML을 자바스크립트 코드에서 정의하고 트랜스파일하는 방식은 아주 편리합니다. 그렇기 때문에 동시에 React를 쓰면서 CSS-In-JS 방식을 고민하게되는 것은 역시 자연스럽게 이어지는 현상입니다. “HTML을 자바스크립트 코드로 관리한다면 스타일 역시 자바스크립트 코드로 관리하면 편리하지 않을까?” 하고요. 실제로 2014년 처음 CSS-In-JS 방식을 제안한 개발자인 Vjeux가 React를 만든 페이스북 출신 개발자라는 것은 우연이 아닐것 같네요.
+
+CSS-In-JS는 이미 2017년도부터 큰 인기를 얻고 상당히 많이 사용하는 스타일 정의 방식입니다. 장단점은 명확한데, 장점은 스타일을 자바스크립트 모듈처럼 정의해서 사용할 수 있기 때문에, 재활용성이 높고 무엇보다 동적인 속성 정의가 편리합니다. 단점은 자바스크립트 소스코드에 스타일 정의가 추가되기 때문에 자연스레 번들링 파일 사이즈가 커집니다.
+
+예를 들어, 경제 지표를 나타내는 대시보드에서 흔히 구현되는 UI요소중 하나는, 상승율을 초록색으로 표시하고 하락율을 빨간색으로 표시하는 것입니다. 이 내용을 전통적으로 구현하면 대략 이런 식일 것입니다.
+
+1. style 정의에서 red 클래스와 green 클래스의 color 속성을 각각 빨간색과 초록색으로 정의해 줍니다.
+2. 수치에 따라 퍼센테이지 텍스트노드를 가지는 부모 HTML 요소에 .red 혹은 .green이라는 클래스 이름을 추가해줍니다.
+
+CSS-In-JS 방식을 사용하면 이러한 동적 스타일 바인딩을 다음처럼 정의하면 됩니다.
+
+1. Style 래퍼 객체를 생성합니다. 이때 스타일 속성들은 CSS-In-JS 라이브러리에 따라 케밥케이스 혹은 카멜케이스로 정의합니다.
+2. 이때 color 속성의 값은 전달받은 값에 따라 다음처럼 동적으로 정의합니다. color: props => props.percentage > 0 ? 'green' : 'red'
+
+두 방식을 비교해보면 CSS-In-JS는 다음과 같은 장점들이 있다는 걸 알 수 있습니다.
+
+- 케이스마다 비슷한 스타일을 반복해서 정의할 필요가 없습니다.
+- 컴포넌트 상태를 참조하는 것이 편리합니다.
+- 또한 동적으로 스타일을 적용해야 하는 컴포넌트(HTML요소)에 접근해서 클래스 이름을 변경하거나 추가해야하는 작업이 불필요해집니다.
+
+무조건적으로 CSS-In-JS를 적용하는 것은 합리적인 선택이 아니겠죠. 위에서 살짝 언급한 CSS-In-JS의 장단점을 보다 자세히 설명한 글이 있어 첨부합니다.
+
+[https://d0gf00t.tistory.com/22](https://d0gf00t.tistory.com/22)
+
+[https://blog.codecarrot.net/all-you-need-to-know-about-css-in-js/](https://blog.codecarrot.net/all-you-need-to-know-about-css-in-js/) (번역글에 첨부된 원문 주소가 이전되어있길래 첨부했습니다)
+
+## CSS-In-JS vs Vue의 동적 스타일
+
+Vue기반에서 React 적용을 고민하는 상황에서, 위에서 첨부한 글 내용 중에서도 중요한 포인트라고 생각되는 부분을 인용하자면 다음과 같습니다.
+
+> CSS는 컴포넌트 기반의 방식을 위해 만들어진 적이 한번도 없었습니다. CSS-in-JS는 이 문제를 정확하게 해결합니다. Vue로 이 문제를 아름답게 해결해보겠다고 외쳐도, Vue의 스타일은 컴포넌트의 상태(state)에 접근할 수 없습니다
+
+위 내용을 읽고 약간 고개가 갸웃거리게 되었는데요, 사실 Vue에서도 위와 같은 CSS-In-JS 방식을 비슷하게 구현할 수 있습니다. Vue는 class와 style에 v-bind를 사용할 때. 표현식은 문자열 이외에 객체 또는 배열을 이용할 수 있습니다.
+
+1. 특정 스타일을 정의한 객체를 반환하는 컴퓨티드 함수를 정의합니다. 이 메서드는 Vue 인스턴스의 data를 참조해서 동적으로 다른 스타일 정의 객체를 반환합니다.
+
+2. 템플릿 내에서 HTML 요소의 style 속성에 컴퓨티드 함수를 바인딩합니다.
+
+아마 저자가 이러한 Vue의 구현방식을 몰랐을 거란 생각은 들지 않습니다. 다만 Vue의 스타일은 컴포넌트의 상태(state)에 접근할 수 없다는 말은 약간 오해를 할만한 표현이네요. 그럼에도 불구하고 같은 구현에 대해 CSS-In-JS 방식이 좀 더 편리해보이는 것은 사실입니다.
+
+## CSS-In-JS Library
+
+근데 한 가지 더 고민해봐야할게 있네요. 바로 CSS-In-JS 라이브러리 중 무엇을 사용해볼까 하는 것입니다. **[Styled Components](https://www.styled-components.com/)**말고도 **[JSS-React](https://github.com/cssinjs/react-jss)**, **[Glamorous](https://glamorous.rocks/), [Radium](https://formidable.com/open-source/radium/), [Aphrodite](https://github.com/Khan/aphrodite), [Stylotron](https://github.com/rtsao/styletron)** 아주 다양한 라이브러리들이 존재하며, 이들의 장단점을 비교해보는 것도 나쁘지 않은 작업입니다. 하지만 어떤 CSS-In-JS 라이브러리를 사용하느냐는 UI 프레임워크처럼 크리티컬하지는 않기 때문에 가장 많이 사용하는 Styled Components를 사용하면 적당한 선택이 될 것 같습니다.
+
+### Styled Components
+
+결정적으로 Styled Components의 장점이라고 생각하는 것은 스타일 속성을 케밥 케이스로 정의할 수 있다는 점입니다. 따라서 스타일시트에 정의된 스타일을 그대로 사용하는데 불편함이 없습니다. 이전 프로젝트의 스타일이나 외부에서 참조하는 스타일을 빠르게 적용해야하는 상황에서 분명히 이점이 있을 것입니다. 자바스크립트에서 오브젝트의 프로퍼티를 케밥케이스로 정의할 수 없기 때문에(문자열로 정의하면 가능은 하지만 불편하죠) 카멜케이스를 쓰는게 일반적입니다. 따라서 CSS-In-JS의 스타일 래퍼객체의 스타일 속성도 보통 카멜케이스를 쓰게됩니다. 그러나 Styled Components는 스타일을 래핑하는데 스타일을 정의한 객체를 사용하는 대신 백틱(`)을 사용한 템플릿 리터럴을 사용합니다. 그렇기 때문에 스타일 속성을 지정하는데 원래의 네이밍 컨벤션인 케밥 케이스를 그대로 사용할 수 있습니다.
+
+```javascript
+import Styeld from 'styled-components'
+
+const StyledDiv = Styled.div`
+  // backgroundColor와 같은 카멜케이스가 아닌 케밥케이스를 사용할 수 있습니다.
+  background-color: 'red'
+`
+```
+
+다른 라이브러리들도 케밥 케이스 사용하는 방법이 있을 수도 있겠지만 기본적으로는 자바스크립트의 프로퍼티를 정의할 때 사용하는 카멜케이스를 사용합니다. Styled Components는 기본적으로 별도의 과정을 거치지 않고 케밥 케이스를 사용할 수 있습니다.
+
+결론적으로 리액트 데모 프로젝트에 CSS-In-JS를 사용해보는 것도 좋은 시도일 것 같습니다. 데모 프로젝트의 장점이 러닝커브와 리팩토링의 부담에서 벗어나 새로운 스펙을 적용해보는 것이기도 하니까요.
+
+---
+
+# Typescript in React
+
+현재 프론트엔드 팀의 주요 프로젝트에서 Vue에 타입스크립트를 적용해서 사용하고 있는 만큼 신사업 프로젝트에 React를 도입하는 경우에도 타입스크립트를 사용한다고 가정하고 관련 내용을 정리했습니다.
+
+먼저 React에 타입스크립트를 적용하는 방식에 몇 가지 선택지가 있는데 각각의 방식에 대해서 소개하겠습니다.
+
+## .jsx 익스텐션 vs .tsx 익스텐션
+
+JSX 문법을 사용하는 React 소스코드를 작성할때 어떤 파일 익스텐션을 사용하는지도 고민해볼 여지가 있는듯 합니다.
+
+우선, .jsx 익스텐션은 jsx문법을 지원하는 파일 익스텐션입니다. .tsx는 .jsx에 타입스크립트까지 지원되는 파일 익스텐션입니다. 만약 위의 두 익스텐션이 아닌 .js 익스텐션으로 jsx문법이나 타입스크립트를 사용하려면 Babel을 사용하면 되겠죠.
+
+먼저 .jsx와 .tsx 익스텐션 이렇게 두 개의 선택지만 놓고 봤을때, JSX문법과 타입을 같이 사용할 거라면 당연히 .tsx 익스텐션이 편리해 보입니다. 두 마리 토끼를 한번에 잡는격이니까요. 다만 타입스크립트 문서를 보면 다음과 같은 내용이 있습니다.
+
+> This asserts the variable bar to have the type foo. Since TypeScript also uses angle brackets for type assertions, combining it with JSX’s syntax would introduce certain parsing difficulties. As a result, TypeScript disallows angle bracket type assertions in .tsx files.
+>
+> Since the above syntax cannot be used in .tsx files, an alternate type assertion operator should be used: as. The example can easily be rewritten with the as operator.
+
+type assertion에서 사용하는 앵글 브라켓이 JSX에서 HTML 태그를 표현할 때도 사용됩니다. 따라서 두 상황의 앵글 브라켓 중에서 type assertion의 앵글 브라켓 사용을 .tsx 익스텐션에서는 허용하지 않습니다.
+
+그렇기 때문에 .tsx에서는 type assertion을 앵글 브라켓 대신 as 로 대체해서 사용합니다.
+
+```javascript
+// var foo = <foo>bar; 는 .tsx에서 허용되지 않습니다.
+var foo = bar as foo;
+```
+
+이러한 부분때문에 일원화를 위해 .tsx 익스텐션을 쓰지 않는 경우에도 type assertion에 as 를 사용하는 것을 권장한다고 하네요. 앵글 브라켓 사용의 제약을 불편하게 느끼냐 마냐에 따라 .tsx 익스텐션의 사용여부를 결정할 수 있을 것 같습니다.
+
+## .jsx(.tsx) 익스텐션vs .js 익스텐션
+
+타입스크립트와는 좀 별개이지만 JSX 문법을 지원하는 .jsx(.tsx) 익스텐션을 사용하는 것과 바벨을 사용해 JSX지원하고 .js 익스텐션을 사용하는 것에 대해서도 고민을 할만한 가치가 있다고 느껴서 관련된 자료들을 첨부해놓았습니다. 한마디로만 정리하면 기능상에서는 차이가 없습니다.
+
+다만 Vite는 .jsx나 .tsx 익스텐션을 기본적으로 지원하는데 .js 익스텐션으로 JSX 문법을 사용하고자 하는 경우에는 Vite가 사용하는 Rollup 번들러의 설정을 수정해줘야하는 것 같네요. 굳이 .js 익스텐션을 사용해야하는 경우가 아니라면 .jsx(.tsx) 익스텐션을 편하게 사용하면 되겠습니다.
+
+---
+
+# Redux vs MobX
+
+MobX는 클래스형 컴포넌트를 기준으로 하기 때문에 함수형 컴포넌트의 Hooks를 사용하려면 오류 발생 가능성이 있고 별도의 플러그인을 사용해야 합니다.  따라서 mobx-react v6 또는 mobx-react-lite의 플러그인을 별도로 설치해야 안정적으로 Hooks를 사용할 수 있습니다. 반대로 Redux는 함수형 컴포넌트, 클래스형 컴포넌트냐에 따른 차이가 있지 않습니다. 그 외에 Redux는 하나의 단일 스토어에서 상태를 관리하지만 MobX는 여러개의 스토어를 가질 수 있다는 점이 뚜렷한 특징입니다.
+
+### 참고
+
+[https://kr.vuejs.org/v2/guide/class-and-style.html#Binding-HTML-Classes](https://kr.vuejs.org/v2/guide/class-and-style.html#Binding-HTML-Classes)
+[https://www.typescriptlang.org/docs/handbook/jsx.html](https://www.typescriptlang.org/docs/handbook/jsx.html) <br/>
+[https://ko.reactjs.org/docs/static-type-checking.html#typescript](https://ko.reactjs.org/docs/static-type-checking.html#typescript)
+[https://github.com/Microsoft/TypeScript-React-Starter#typescript-react-starter](https://github.com/Microsoft/TypeScript-React-Starter#typescript-react-starter)
+[https://stackoverflow.com/questions/46169472/reactjs-js-vs-jsx](https://stackoverflow.com/questions/46169472/reactjs-js-vs-jsx)
+[https://github.com/airbnb/javascript/pull/985](https://github.com/airbnb/javascript/pull/985)
