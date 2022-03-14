@@ -2,7 +2,7 @@ const siteMetadata = {
   title: `YoungHwan' Blog`,
   author: 'YoungHwan Joe',
   headerTitle: `YoungHwan's Blog`,
-  description: 'A blog created with Next.js and Tailwind.css',
+  description: '본 블로그는 Next.js를 기반으로 만들어졌습니다.',
   language: 'ko-KR',
   theme: 'dark', // system, dark or light
   siteUrl: 'https://younghwanjoe.netlify.app',
