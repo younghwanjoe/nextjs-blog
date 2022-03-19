@@ -1,0 +1,64 @@
+---
+title: 실제 프로젝트에 사용하는 유틸리티 함수에 메모이제이션 적용해보기
+date: '2022-03-19'
+lastmod: '2022-03-19'
+tags: ['javascript', 'algorithm']
+draft: false
+summary: 프로젝트에서 픽셀 기준으로 viewport단위를 계산하기 위해 만든 간단한 유틸리티 함수에 메모이제이션을 적용한 경험을 정리한 글입니다. 짧습니다.
+authors: ['default']
+---
+
+## 픽셀을 viewport 를 계산해주는 유틸리티 함수 제작
+
+픽셀 기준으로만 만들어진 디자인 시안에서 viewport 단위를 사용해서 반응형 레이아웃 구현을 해야하는 상황이 있었다.
+당시 추가 디자인 명세를 받을 수 없었기 때문에 viewport 단위로 일일이 계산을 해줘야하는 상황이었는데 몇번 계산기를 쓰다보니 귀찮은 작업이라 간단한 유틸함수를 만들어
+썼었다. 이게 생각보다 유용해서 프로젝트 전반에 자주 사용하게 되었다.
+
+```typescript
+export const calculateViewport = (viewportWidth: number, elementWidth: number) => {
+  return parseFloat((elementWidth / (viewportWidth / 100)).toFixed(1))
+}
+```
+
+코드는 위와 같고 정말 간단한 함수다. 위 함수의 파라미터로 시안의 해상도 width와 시안상 UI 엘리먼트의 width를 넣으면 그에 맞게 `vw`를 계산해 반환한다.
+`vh`도 똑같은 원리로 높이를 넣으면 얻을 수 있다.
+
+보통 반응형 레이아웃을 구현할때 제공되는 디자인 시안은 각각 다른 해상도를 가지고 있다.
+진행한 프로젝트의 경우, 데스크톱은 1920*1080의 해상도를 기준으로, 모바일은 720 * 480 해상도를 기준으로 제플린 시안이 제공되었는데
+편의성을 위해 플랫폼별로 함수를 확장해서 썼다.
+
+```typescript
+import { calculateViewport } from '@/utils'
+
+export const calculateViewportDesktop = (elementWidth: number) => {
+  return calculateViewport(1920, elementWidth)
+}
+
+export const calculateViewportMobile = (elementWidth: number) => {
+  return calculateViewport(720, elementWidth)
+}
+```
+
+이러면 시안에서 UI 엘리먼트의 width의 픽셀만 위 함수들의 파라미터로 전달하면
+원하는 해상도에서의 vw를 반환받을 수 있어서 편리하다(vw도 동일하다).
+
+## 유틸리티 함수에 메모이제이션 적용
+
+위 함수들은 viewport 단위 계산에 어디서나 쓰였기 때문에 자주 호출되는 편이었다.
+자주 호출되는 만큼 결과값을 저장해서 재사용하면 어떨까 하는 한 팀원의 의견이 있었는데
+좋은 생각이라는 생각이 들어 바로 함수를 변형해 보았다.
+복잡한 함수가 아니다보니 성능상 체감이 크진않을거라고 보았지만 분명히 더 나은 함수라는 생각이 든다.
+
+메모이제이션을 적용하여 결과값을 캐싱하여 사용하는 함수로 변경하였는데 코드는 다음과 같다.
+
+```typescript
+const viewportCache = new Map()
+
+export const calculateViewport = (viewportWidth: number, elementWidth: number) => {
+  const cacheKey = `${viewportWidth}-${elementWidth}`
+  if (!viewportCache.get(cacheKey)) {
+    viewportCache.set(cacheKey, parseFloat((elementWidth / (viewportWidth / 100)).toFixed(1)))
+  }
+  return viewportCache.get(cacheKey)
+}
+```
