@@ -1,0 +1,70 @@
+---
+title: 타입스크립트의 const assertion
+date: '2022-03-22'
+lastmod: '2022-03-22'
+tags: ['typescript']
+draft: false
+summary: 타입스크립트의 3.4버전부터 도입된 const assertion 문법을 프로젝트에 적용하게된 적이 있다.
+authors: ['default']
+---
+
+그래프로 시각화할때 가장 많이 사용하는 라이브러리인 `Chart.js`는 그래프의 형태와 특징을 정의하기 위하 단순하지만은 않은 options 객체를 정의해서 사용하게된다.
+
+```typescript
+const options = {
+  responsive: true,
+  maintainAspectRatio: false,
+  scales: {
+    x: {
+      grid: { display: false },
+      position: 'right' as const, // const assertion을 사용한 부분
+      ticks: {
+        padding: 15,
+        autoSkip: false,
+      },
+    },
+    y: {
+      grid: { drawBorder: false },
+      ticks: {
+        // 생략
+      },
+    },
+  },
+  // 생략
+}
+```
+
+위의 코드는 실제 프로젝트에서 `Chart.js`를 사용하면서 option으로 넘겨주는 객체를 정의했던 내용을 간략화한 것이다.
+
+`options`의 객체의 중간에 보면 `as const`로 타입을 선언한 부분이 있다. `const assertion`을 사용한 코드가 있는데
+
+이 부분은 `position: 'right' as const`가 아니라 `position: 'right'`이라고 작성한 상태로 타입스크립트 컴파일을 하면 다음과 같은 에러가 발생한다.
+
+```linux
+options?: ChartOptions<TType>;
+           ~~~~~~~
+    The expected type comes from property 'options' which is declared here on type 'IntrinsicAttributes<T> & Pick<ChartProps<"line", number[], string>, "height" | "width" | "color" | "data" | "slot" | "style" | "title" | ... 257 more ... | "fallbackContent"> & { ...; }'
+```
+
+## const assertion
+
+`Chart.js`의 차트 객체는 파라미터로 받는 option 객체를 받고
+
+이 option 객체는 중첩구조가 깊은 객체이다.
+
+프로퍼티중에 `scales.x.position`의 경우 `'top' | 'left' | 'bottom' | 'right'`으로 된 유니온 타입으로 지정되어 있다.
+
+객체 프로퍼티는 넓은 범위의 타입추론을 하는데 결과적으로 `scales.x.position`으로 넘겨받은
+
+`right`을 기반으로 `string`타입으로 추론한다.
+
+`string`은 `'top' | 'left' | 'bottom' | 'right'` 타입과 일치하지 않으므로
+
+타입스크립트는 타입 에러를 발생시키는 것이다.
+
+`const assertion`를 사용하면 타입 추론의 범위를 한정시켜줄 수가 있다.
+위의 경우 타입 추론의 범위를 한정지어줌으로써 `Chart.js`의 차트 객체로 넘겨주는 option이 요구하는 타입을 정확히 일치시켜줄 수 있다.
+
+### 참조
+
+[TypeScript 3.4: const assertion](https://medium.com/@seungha_kim_IT/typescript-3-4-const-assertion-b50a749dd53b)
