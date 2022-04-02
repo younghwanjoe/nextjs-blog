@@ -3,40 +3,352 @@ title: React 18의 주요 특징들을 살펴보기
 date: '2022-03-31'
 lastmod: '2022-03-31'
 tags: ['react']
-draft: true
+draft: false
 summary: 리액트 18버전이 3월 29일 공식적으로 릴리즈 됐습니다. 어떤 기능들이 추가됐는지 살펴보겠습니다.
 authors: ['default']
 ---
 
 # React v18.0 공식 릴리즈
 
+리액트 18버전이 3월 29일 공식적으로 릴리즈 됐습니다. 해당 내용은 리액트 공식 블로그에 소개되어 있는데요.
+아직 한글 번역본은 나와있지 않기때문에 핵심적인 내용들을 번역하며 정리해 보았습니다.
+여러 새로운 기능들 중에서 특히 렌더링 성능과 관련 깊은 `Auto Batching`을 자세하게 다루고 있고 `Transition`과
+`Suspense`의 새로운 특징들을 다룹니다.
+
 ## Concurrent React란?
+
+> The most important addition in React 18 is something we hope you never have to think about: concurrency
+
+리액트 개발팀이 이번 18버전에서 가장 중요하게 생각하는 추가요소가 `concurrency`, '동시성'이라고 합니다.
+
+조금 추상적인 용어라 쉽게 감이 오지 않습니다. 이것이 어떤 맥락에서 그렇게 중요도를 가지는지에 대하여 계속 상술할텐데요,
+우선 설명에 따르면 `동시성`은 그 자체로는 기능은 아니며 일종의 메커니즘입니다.
+무엇에 대한 메커니즘이냐 하면, 동시에 여러개의 UI 버전을 준비해놓을 수 있게 하는 메커니즘입니다.
+
+이것은 `priority queues`나 `multiple buffering` 같은 복잡한 내부 구현 테크닉들을 가지고 구현되었다고 하는데요. 이러한 개념들은 여기서 직접 다룰것은 아니고 실제 우리가 API를 사용하면서 마주치지는 않을테니 간단히 알아두면 될 것 같습니다.
+리액트 개발자들은 관련 API를 설계하면서 개발자들로부터 디테일한 내부 구현 내용은
+숨겨놓았는데요, 그 이유는 여러분이 사용자 경험에 집중하고, 리액트는 어떻게 그 사용자 경험을
+전달할지를 다룸으로써 역할을 분리하기 위함입니다. 따라서 `동시성`이 어떻게 구현되고 이루어지는지는
+여러분이 반드시 이해할 필요는 없습니다.
+
+그러나 `Concurrent`리액트는 세부적인 구현 이상으로 리액트의 핵심적인 렌더링 모델에 있어서 상당히 중요한 업데이트라고 할 수 있습니다.
+따라서 `동시성`이 어떻게 작동하는것을 이해하는것이 상당히 중요한것 까진 아니더라도,
+그것이 어떤 것인지 아는것은 중요합니다.
+
+`Concurrent` 리액트의 핵심은 렌더링이 `중단가능`하다는 것입니다. 만약 우리가 React 18로 업그레이드 한다고 했을때,
+어떤 `concurrent` 기능들을 넣지 않은 상태라면, 리액트 내에서 업데이트는 이전의 리액트 버전과 동일하게 렌더링 됩니다.
+이것은 중단불가하고 동기적이며 단 한 번의 트랜잭션 내에서 이루어집니다.
+동기적인 렌더링 통해서 업데이트가 렌더링을 시작하면 사용자가 화면에 결과물을 보기전까지는 어떤것도 렌더링을 방해할 수 없습니다.
+
+반면에 `concurrent` 렌더의 경우, 위의 케이스가 항상 적용되는 것은 아닙니다. 리액트는 업데이트를 렌더링하기 시작하고나서 중간에
+중지 시키고 이후에 재개시킬 수 있습니다. 이미 진행중인 렌더를 함께 중단시킬 수도 있습니다.
+리액트는 만약 렌더가 중단되더라도 UI가 나타나는 것을 보장합니다. 이것을 위해 리액트는 한 번 전체 트리가 계산되면
+DOM 조작이 끝날때까지 기다립니다. 이러한 능력 덕분에, 리액트는 백그라운드에 메인 스레드를 블로킹하지 않고도
+새로운 화면을 준비시킬 수 있습니다. 이것은 상당히 큰 렌더링 작업 중간일지라 하더라도, 사용자의 입력에
+즉각적으로 UI가 반응할 수 있으며 결과적으로 유연한 사용자 경험을 만들 수 있다는 것을 의미합니다.
+
+또 다른 예로는 재사용 가능한 상태가 있습니다. `Concurrent React`는 화면에서 UI 섹션을 제거하고 이전 상태를
+재사용하면서 나중에 다시 그 섹션들을 덧붙힐 수 있습니다. 예를 들어, 사용자가 화면으로부터 떨어지고 다시 돌아오면,
+리액트는 이전의 화면을 이전 상태 그대로 저장할 수 있어야 합니다.
+
+리액트 개발자들은 이러한 패턴을 구현하는 `<Offscreen>`라고 불리는 새로운 컴포넌트를 추가할 예정이라고 합니다.
+비슷하게 백그라운드에 새로운 UI를 준비함으로써 사용자가 UI를 노출 시킬기 전에 이미 준비할 수 있도록 `Offscreen`을 사용할 수 있게 될것입니다.
+
+`Concurrent` 렌더링은 리액트의 새로운 강력한 도구이며 `Suspense`, `Transitions` 그리고 `Streaming` 서버 렌더링등의 이번 새로운 기능들은
+`Concurrent`렌더링의 사용하기 위해 만들어진 기능들입니다.
 
 ## Concurrent 기능들을 점진적으로 적용하기
 
-# 새로운 기능들
+기술적으로 `concurrent` 렌더링은 굉장한 변화입니다. 왜냐하면 `concurrent` 렌더링은 중단가능하기 떄문에 컴포넌트들은
+조금씩 다르게 동작할 수 있습니다.
 
-## 1. Automatic Batching
+리액트 개발자들은 수천개의 컴포넌트들을 리액트 18로 업그레이드를 하면서 테스트를 해보았습니다. 그 결과
+거의 모든 컴포넌트 들이 `concurrent`렌더링과 함께 어떠한 변화도 없이 잘 작동했습니다.
+하지만, 일부는 약간의 추가적인 마이그레이션을 해줘야 했습니다. 그 변화들은 대개 작은 수준이었지만,
+어느정도 활용능력을 요구하는 부분이었습니다. 따라서 리액트 18의 새로운 렌더링은
+`리액트의 새로운 기능들을 사용하는 애플리케이션 내부에서만 사용 가능합니다.`
 
-## 2. Transitions
+전체적인 업그레이드 전략은 리액트 18 버전에서 작동하는 애플리케이션을 기존 코드의 변경없이 사용하는 것입니다.
+따라서 여러분은 `concurrent`기능들을 추가하는것으로부터 업그레이드를 시작할 수 있습니다.
+여러분은 `<StrictMode>`를 개발모드에서 사용하여 도움을 받을 수 있습니다. `Strict Mode`는 프로덕션 환경에서는
+영향을 주지 않지만 개발 환경에서는 별도의 경고나 멱등성이 있는 이중 함수(double-invoke function)에 대한 로그를
+남깁니다. `Strict Mode`는 모든 것에 대해 캐치하지는 않지만 흔한 실수들을 예방하는데 효과적입니다.
 
-## 3. 새로운 Suspense 기능들
+React 18 버전으로 업그레이드하면 여러분은 바로 `concurrent`기능들을 사용할 수 있습니다. 예를 들어,
+여러분은 사용자의 입력에 대한 블로킹 없이도 화면들을 이동할 수 있는 `startTransition`을 사용할 수 있습니다.
+혹은 비용이 큰 리렌더에 대해 쓰로틀해주는 `useDeferredValue`를 사용할 수도 있습니다.
+하지만 장기적인 과점에서 리액트 개발자들은 `concurrency`를 사용하는 방법으로 `concurrent`를 사용가능한
+라이브러리나 프레임워크를 사용하는 것을 생각하고 있습니다. 대부분의 케이스에서 여러분은 `concurrent` API들을
+직접적으로 사용하게 되진 않을 것입니다. 예를 들어, 개발자들이 직접 새로운 화면 이동에 `startTransition`을
+호출하는 대신에, 사용하는 라우터 라이브러리가 자동으로 네비게이션을 `startTransition`으로 래핑해주는 것입니다.
+아마도 라이브러리들이 `concurrent` 기능에 호환되는데 시간이 좀 걸리겠지만, 리액트 개발자들은 `concurrent` 기능들을
+활용하도록 쉽게 새로운 API를 제공하고 있습니다.
 
-기존의 Suspense 기능에 추가된 내용들이 있습니다.
+# React 18의 새로운 기능들
 
-## 4. 새로운 Hooks
+## 1. 자동 배칭(Automatic Batching)
 
-### useId
+`Batching`이란 리액트가 여러개의 상태 변화를 단일 리렌더로 그룹화하여 성능을 개선하는 방법입니다.
+`자동 배칭`이 없었을 때에는 리액트 이벤트 핸들러에서만 `배치`가 동작했고 기본적으로 이외의 `Promise`,
+`setTimeout`이나 `네이티브 이벤트 핸들러` 혹은 이외의 이벤트에서는 `배치`되지 않았습니다.
+이제 `자동 배칭`을 사용하면 이러한 업데이트들에 대해서도 자동으로 `배치`되게 됩니다.
+해당 개념에 대해서는 리액트 깃헙의 [토론](https://github.com/reactwg/react-18/discussions/21)에서 상세하게 다루고 있어 함께 정리했습니다.
+
+### 배칭(Batching)이란?
+
+리액트에서 `Batching` 이라는 개념은 state를 변경하는걸 묶어서 한번만 리렌더링하는 것을 의미합니다.
+예를 들어 리액트에서 useState로 관리하는 state가 두개 있고
+한 이벤트 리스너의 콜백함수에서 두 상태를 업데이트한다고 하면
+배치는 이걸 묶어서 한번만 리렌더링 될수있게하는 메커니즘입니다.
+만약 이러한 매커니즘이 없다면 각각의 상황에서 리렌더링이 일어나 두번의 리렌더링이 일어나게 됩니다.
+따라서 `배치`를 통해 불필요한 리렌더를 피함으로써 애플리케이션의 성능이 올라가게 됩니다.
+
+```javascript
+function App() {
+  const [count, setCount] = useState(0)
+  const [flag, setFlag] = useState(false)
+
+  function handleClick() {
+    setCount((c) => c + 1) // 아직 리덴더하지 않습니다
+    setFlag((f) => !f) //아직 리덴더하지 않습니다
+    // 리액트는 오직 한번만 리렌더합니다 (batching!)
+  }
+
+  return (
+    <div>
+      <button onClick={handleClick}>Next</button>
+      <h1 style={{ color: flag ? 'blue' : 'black' }}>{count}</h1>
+    </div>
+  )
+}
+```
+
+그러나 예외상황이 있습니다. 이벤트 핸들러 콜백 내부의 다시 콜백함수가 있을 경우, 그 내부에서는 배치 업데이트가 되지 않습니다.
+
+```javascript
+function App() {
+  const [count, setCount] = useState(0)
+  const [flag, setFlag] = useState(false)
+
+  function handleClick() {
+    fetchSomething().then(() => {
+      // 리액트 17과 이전 버전은 이것들을 batch 하지 않습니다
+      // 왜냐하면 콜백 내부에서는 이벤트 *도중에* 동작하는 것이 아니라 *이후에* 동작하기 때문입니다
+      setCount((c) => c + 1) // 리렌더를 유발합니다
+      setFlag((f) => !f) // 리렌더를 유발합니다
+    })
+  }
+
+  return (
+    <div>
+      <button onClick={handleClick}>Next</button>
+      <h1 style={{ color: flag ? 'blue' : 'black' }}>{count}</h1>
+    </div>
+  )
+}
+```
+
+리액트 18 이전까지는, 기본적으로 `Promise`나 `setTimeout`혹은 `네이티브 이벤트핸들러`등에서는 배치 업데이트를 하지 않았습니다.
+
+### 자동 배칭(Automatic Batching)은 무엇일까?
+
+18에서는 어디에부터 업데이트가 일어나는지 상관없이, 모든 업데이트는 자동적으로 배치됩니다.
+즉 아까말한 `Promise`나 `setTimeout`혹은 `네이티브 이벤트핸들러` 혹은 이외의 이벤트에서도
+React event안에서 그러하듯이 배치가 업데이트 됩니다. 이로 인해 리액트 앱의 성능은 더 향상될 것입니다.
+
+```javascript
+function App() {
+  const [count, setCount] = useState(0)
+  const [flag, setFlag] = useState(false)
+
+  function handleClick() {
+    fetchSomething().then(() => {
+      // React 18 and later DOES batch these:
+      // 리액트 18과 이후 버전은 이것들을 batch합니다
+      setCount((c) => c + 1)
+      setFlag((f) => !f)
+      // 리액트는 오직 한번만 리렌더합니다 (batching!)
+    })
+  }
+
+  return (
+    <div>
+      <button onClick={handleClick}>Next</button>
+      <h1 style={{ color: flag ? 'blue' : 'black' }}>{count}</h1>
+    </div>
+  )
+}
+```
+
+> 리액트 18을 적용하면서 그 일환으로 `createRoot` 업그레이드를 했다고 가정합니다. `createRoot`에 대해서는 아래에서 설명합니다.
+
+`자동 배칭`적용하면 리액트는 업데이트가 어디에서 일어나는지 상관없이 자동으로 배치 업데이트를 합니다.
+
+```javascript
+function handleClick() {
+  setCount((c) => c + 1)
+  setFlag((f) => !f)
+  // 리액트는 오직 한번만 리렌더합니다 (batching!)
+}
+```
+
+```javascript
+setTimeout(() => {
+  setCount((c) => c + 1)
+  setFlag((f) => !f)
+  // 리액트는 오직 한번만 리렌더합니다 (batching!)
+}, 1000)
+```
+
+```javascript
+fetch(/_..._/).then(() => {
+  setCount((c) => c + 1)
+  setFlag((f) => !f)
+  // 리액트는 오직 한번만 리렌더합니다 (batching!)
+})
+```
+
+```javascript
+elm.addEventListener('click', () => {
+  setCount((c) => c + 1)
+  setFlag((f) => !f)
+  // 리액트는 오직 한번만 리렌더합니다 (batching!)
+})
+```
+
+위의 경우에서 모두 자동으로 배치 업데이트됩니다.
+
+> 대개 리액트는 안전할때에만 배치를 실행합니다. 예를 들어, 리액트는 `click`이나 `keypress`같은
+> 각각의 사용자 이벤트에 대해서는 `DOM`이 다음 이벤트 전에 제대로 업데이트 되도록 보장합니다.
+> 구체적으로, 제출시에 사용불가처리가 되는 폼은 연속으로 두번 제출 처리되지 않습니다.
+
+### 만약 batch를 하고 싶지 않다면?
+
+대부분의 경우 `배칭`은 안전하지만, 상태 변화 후에 즉시 `DOM`을 읽는 것에 의존하는 일부 코드가 있을 수 있습니다.
+이러한 케이스를 위해서 `ReactDOM.flushSync()`를 사용해서 `배칭`을 사용하지 않을 수 있습니다.
+
+```javascript
+import { flushSync } from 'react-dom'
+
+function handleClick() {
+  flushSync(() => {
+    setCounter((c) => c + 1)
+  })
+  // 리액트는 지금 DOM을 업데이트합니다.
+  flushSync(() => {
+    setFlag((f) => !f)
+  })
+  // 리액트는 지금 DOM을 업데이트합니다.
+}
+```
+
+## 2. 트랜지션(Transitions)
+
+`트랜지션`은 리액트에서 긴급 업데이트와 긴급하지 않은 업데이트를 구분하는 새로운 개념입니다.
+
+- `긴급한 업데이트`는 타이핑이나 클릭 등 직접적인 인터렉션을 반영합니다.
+- `트랜지션 업데이트`는 UI를 뷰에서 다른 뷰로 변화시킵니다.
+
+타이핑이나 클릭 혹은 누르기같은 긴급한 업데이트는 물리적 물체들의 동작에 대한 우리의 직관에
+맞게 즉시 반응해야합니다. 그렇지 않으면 "잘못된" 것처럼 보이니까요. 하지만,
+`트랜지션`은 사용자가 화면에 모든 중간 값을 보기를 원하지는 않기때문에 다릅니다.
+
+예를 들어, 여러분이 드롭다운에서 필터를 선택할 때, 필터 버틑 그 자체가 클릭시에 바로 반응할 것이라
+기대합니다. 하지만, 실제로는 개별적으로 변화합니다. 약간의 딜레이는 눈에 띄지도 않고 종종 예상되기도 합니다.
+그리고 여러분이 결과가 렌더링 되기 전에 다시 필터를 바꾸면 여러분은 최종 결과만 신경씁니다.
+
+대체로, 사용자 경험을 위해 한 사용자의 입력은 긴급한 업데이트와 긴급하지 않은 업데이트 모두를 발생시킵니다.
+여러분은 `startTransition` API를 입력 이벤트에 사용하여 리액트가 긴급한 업데이트인지 `트랜지션`인지에
+대해 알게 할 수 있습니다.
+
+```javascript
+import { startTransition } from 'react'
+
+// 긴급: 타이핑된 것을 보여줌
+setInputValue(input)
+
+// 어떤 상태 업데이트든 트랜지션으로 표시함
+startTransition(() => {
+  // 트랜지션: 결과를 보여줌
+  setSearchQuery(input)
+})
+```
+
+`startTransition`으로 감싸진 업데이트는 긴급하지 않은 업데이트로 간주됩니다. 그리고
+클릭이나 키보드 누르기같은 더 긴급한 업데이트가 발생하면 중단됩니다.
+만약 트랜지션이 사용자에 의해 중단되면(예: 여러개의 문자를 한줄에 타이핑하기), 리액트는 완료되지
+않은 렌더링은 버리고 최신 업데이트만 렌더합니다.
+
+`트랜지션`은 업데이트가 중단가능하게 만들기 떄문에 `concurrent` 렌더링에 요긴합니다.
+콘텐츠가 재지연되면 `트랜지션`은 리액트에게 백그라운드에서 트랜지션 콘텐츠가 렌더링되는 동안
+현재의 콘텐츠를 보여주게끔 합니다.
+
+`트랜지션` 업데이트는 중단가능하며 이미 보여진 콘텐츠에 대해 `Suspense fallbacks`로 되돌아가지 않습니다.
+이와 관련된 `useTransition`이라는 새로운 hooks도 생겨났습니다.
 
 ### useTransition
 
-### useSyncExternalStore
+```javascript
+const [isPending, startTransition] = useTransition()
+```
 
-### useInsertionEffect
+트랜지션의 펜딩된 상트를 위한 상태값과 그것을 시작하기 위한 함수를 반환합니다.
+`startTransition`은 제공된 콜백을 `트랜지션`으로 표시합니다.
 
-## 이외의 특징들(간략하게 소개)
+`isPending`은 `트랜지션`이 활성화됐을때 펜딩 상태를 보여주기 위해 표시합니다.
 
-- [Suspense in Data Frameworks](https://reactjs.org/blog/2022/03/29/react-v18.html#suspense-in-data-frameworks)
-- [Server Components](https://reactjs.org/blog/2020/12/21/data-fetching-with-react-server-components.html)
-- [New Client and Server Rendering APIs](https://reactjs.org/blog/2022/03/29/react-v18.html#new-client-and-server-rendering-apis)
-- [New Strict Mode Behaviors](https://reactjs.org/blog/2022/03/29/react-v18.html#new-strict-mode-behaviors)
+```javascript
+function App() {
+  const [isPending, startTransition] = useTransition()
+  const [count, setCount] = useState(0)
+
+  function handleClick() {
+    startTransition(() => {
+      setCount((c) => c + 1)
+    })
+  }
+
+  return (
+    <div>
+      {isPending && <Spinner />}
+      <button onClick={handleClick}>{count}</button>
+    </div>
+  )
+}
+```
+
+`트랜지션`안에서의 업데이트는 클릭과 같은 보다 긴급한 업데이트를 만듭니다.
+`트랜지션`안에서의 업데이트는 재중지된 콘텐츠에 대해 fallback을 보여주지 않습니다.
+이것은 업데이트를 렌더링하는 동안에도 사용자가 현재 콘텐츠와 상호작용을 지속할 수 있도록 합니다.
+
+## 3. 새로운 Suspense 기능들
+
+`Suspense`는 컴포넌트 트리의 일부가 아직 보여줄 준비가 되지 않았을때 보여줄 로딩 상태를
+서술문으로 지정하기 위해 사용합니다.
+
+```javascript
+<Suspense fallback={<Spinner />}>
+  <Comments />
+</Suspense>
+```
+
+`Suspense`는 UI 로딩 상태를 리액트 프로그래밍 모델 안에서 서술문적인 일급 개념으로 만듭니다.
+이것은 우리가 고차원의 기능들을 만들게 합니다.
+
+몇년 전 도입한 제한된 버전의 `Suspense`는 오직 `React.lazy`를 사용한 코드 스플리팅에만 사용됐습니다.
+그리고 서버에서의 렌더링은 전혀 지원하지 않았습니다.
+
+리액트 18에서는, `Suspense`를 서버에서도 지원하며, `concurrent` 렌더링 기능과 함께 활용성을 늘렸습니다.
+리액트 18의 `Suspense`는 `transition` API와 결합될 때 특히 좋습니다. 만약 여러분이 `transition` 동안에
+`Suspense`를 사용하여 지연시키면 리액트는 이미 보여진 콘텐츠가 fallback으로 교체되지 않도록 합니다.
+대신에 리액트는 실패한 로딩 상태를 보여주지 않고 충분히 데이터가 받아와지길 기다렸다가 렌더합니다.
+
+## 참고
+
+https://github.com/reactwg/react-18/discussions/21
+https://github.com/reactwg/react-18/discussions/5
+https://reactjs.org/blog/2022/03/08/react-18-upgrade-guide.html
+
+```
+
+```
