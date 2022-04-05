@@ -1,0 +1,184 @@
+---
+title: eslint-plugin-import를 활용해서 코딩 컨벤션 만들기
+date: '2022-04-05'
+lastmod: '2022-04-05'
+tags: ['eslint', 'javascript']
+draft: false
+summary: 코드를 짜다보면 필연적으로 수많은 import 구문들이 생기게 되는데요, 모듈 속성에 따라 import문의 순서에 대한 코딩 컨벤션을 손쉽게 만들고 적용할 수 있는 eslint-plugin-import를 소개합니다.
+authors: ['default']
+---
+
+# eslint-plugin-import
+
+## 소개
+
+`eslint-plugin-import`는 lint규칙을 사용해서 코딩 컨벤션을 설정하게 돕는 플러그인의 하나다. 제공하는 기능은 여러가지가 있지만, 그 중에서도
+import구문의 순서를 정의할 수 있는 규칙을 설정할 수 있는 기능을 소개한다.
+
+```typescript
+import { useContext, useEffect } from 'react'
+import styled, { keyframes } from 'styled-components'
+import cx from 'classnames'
+import { ModalContext } from '@/components/basic/PreviewSection/context'
+import { numberFormatter, scaler } from '@/utils'
+
+import Card from '@/components/basic/Card'
+import Avatar from '@/components/basic/Avatar'
+import IconButton from '@/components/basic/IconButton'
+
+import thumbUpIcon from '@/assets/icons/icon-thumb-up-dark-gray.svg'
+import thumbUpCircleIcon from '@/assets/icons/icon-thumb-up-circle-dark.svg'
+
+import { SpaceCategories, SpaceSimple } from '@/interface/Space'
+
+import tw from 'twin.macro'
+import Icon from '@/components/basic/Icon'
+import Device, { DeviceType } from '@/styles/Device'
+```
+
+위 코드를 보자. 실제로 프로젝트에 사용되고 있는 코드였다.
+import 구문이 많다. 리액트 hook을 위한 import 구문부터 styled-component등의 거의 반드시 사용하게 되는 라이브러리들과
+프로젝트 내부의 모듈들, 그리고 asset파일들도 있다.
+
+재사용성을 위해서 모듈화를 열심히 해놓을수록 import 구문은 많아질 것이다.
+import 구문이 많은 것은 당연한 것이므로 이것이 나쁘다는 것은 아니다.
+다만 import 구문에 대한 범주화를 해야겠다는 필요성을 느끼는 시점이 온다.
+프로젝트를 진행하면서 이러한 import 구문에 대한 컨벤션에 대해 팀원들과 이야기를 해서 어느정도 정해놓은 룰은 있었다.
+
+- react나 styled-component같은 외부 라이브러리는 최상단에
+- 내부 모듈들은 그 하단에
+- 내부 컴포넌트들은 그 하단에
+
+그리고 각각의 범주에 해당하는 import구문은 빈 라인으로 구분하는것 으로 정리해놓았다.
+
+하지만 컴포넌트 파일을 생성하고 react,styled-component등 필요한 라이브러리를 import하고 코드를 작성하다가
+다시 해당 코드를 동작시키는데 필요한 라이브러리나 모듈들 혹은 asset들을 import하다보면 import구문들은 각자 개성있게 자리를 잡고있다.
+내가 사용하는 vscode를 기준에서는 특정 키워드를 사용하면 해당 키워드와 관련된 라이브러리를 import하는 구문을 자동으로 생성할 수 있는데
+이 경우에는 import구문의 최하단에 생성하기때문에 또한 import 구문이 제대로 정리되지 않는다.
+
+이러한 상황이 반복되다 보면 누군가 이러한 비슷한 고민을 반드시 해봤을 것이라는 확신에 차게 된다.
+그래서 구글링을 한 결과 찾게 된 것이 `eslint-plugin-import`이다.
+
+## 기능
+
+`eslint-plugin-import`가 제공하는 기능은 여러가지가 있다.
+정적인 분석과 유용한 경고를 띄우는 기능들도 있지만 내가 당장 필요로 했던 기능은 아니었기에 스킵하고 바로 `Style guide` 에 관한 기능들을 살펴봤다.
+코딩 컨벤션을 위한 여러가지 규칙들을 적용할 수 있는 기능을 제공하고 있었다.
+
+- Ensure all imports appear before other statements (first)
+- Ensure all exports appear after other statements (exports-last)
+- Report repeated import of the same module in multiple places (no-duplicates)
+- Forbid namespace (a.k.a. "wildcard" \*) imports (no-namespace)
+- Ensure consistent use of file extension within the import path (extensions)
+- Enforce a convention in module import order (order)
+- ...
+
+위는 예시로 몇개의 style guide 규칙들을 나열한 것이다. 위에 나열하지 않은 규칙들을 포함해서 하나하나 유용하지 않아 보이는 것이 없었다.
+하지만 그 중에서도 아래 규칙이야말로 내가 찾던 것이다.
+
+- Enforce a convention in module import order (order)
+
+모듈을 import하는데 순서에 대한 컨벤션을 설정하는 기능이다.
+이제 이것을 적용해보자.
+
+## 설치 및 설정
+
+우선 간단히 설치과정을 거친다.
+
+```linux
+npm install eslint-plugin-import --save-dev
+```
+
+여기서는 Typescript를 기준으로 설정했다.
+그러기 위해 추가적으로 필요한 모듈이 있는데 같이 설치해준다
+
+```linux
+npm install @typescript-eslint/parser --save-dev
+```
+
+그리고 ESlint 설정을 추가한다.
+
+```json
+extends:
+
+- eslint:recommended
+- plugin:import/recommended
+- plugin:import/typescript # this line does the trick
+
+```
+
+이것으로 기본적인 설치 및 설정은 끝났다.
+
+## order 규칙 설명
+
+[order 규칙](https://github.com/import-js/eslint-plugin-import/blob/main/docs/rules/order.md)에서 어떤 기준으로 import 구문들에 대한 컨벤션이 적용되는지 확인해봤다.
+order의 기준이 되는 타입들은 총 8가지가 있다.
+
+```javascript
+groups = ['builtin', 'external', 'internal', 'parent', 'sibling', 'index', 'object', 'type']
+```
+
+각각의 타입에 대한 설명은 아래와 같다. 이중 `object`와 `type`은 타입스크립트에만 유효한데, 타입스크립트의 타입들을 가져올때 유용해보인다.
+
+```typescript
+// 1. 노드의 "빌트인" 모듈들(node "builtin" modules)
+import fs from 'fs';
+import path from 'path';
+// 2. "외부" 모듈들("external" modules)
+import \_ from 'lodash';
+import chalk from 'chalk';
+// 3. "내부" 모듈들("internal" modules)
+// (만약 path나 웹팩의 내부 경로를 다르게 설정했을 경우)
+import foo from 'src/foo';
+// 4. "부모" 디렉토리에서 가져온 모듈들(modules from a "parent" directory)
+import foo from '../foo';
+import qux from '../../foo/qux';
+// 5. 형제의 디렉토리나 같은 디렉토리에서 가져온 "형제" 모듈들("sibling" modules from the same or a sibling's directory
+import bar from './bar';
+import baz from './bar/baz';
+// 6. 현재 디렉토리의 "인덱스" 파일("index" of the current directory)
+import main from './';
+// 7. "오브젝트" import(타입스크립트에서만 가능) ("object"-imports (only available in TypeScript))
+import log = console.log;
+// 8. "타입" import (타입스크립트에서만 가능) ("type" imports (only available in Flow and TypeScript))
+import type { Foo } from 'foo';
+
+```
+
+그룹에 대한 정의는 `string`이나 `[string]`으로 이루어진 배열로 정의한다.
+즉,
+`["builtin", "external", "parent", "sibling", "index"]`
+이런식으로 정의하거나
+
+```plain
+[
+'builtin', // 빌트인 타입이 첫번째
+['sibling', 'parent'], // 그리고 형제와 부모 타입들이 온다. 그들은 섞일 수 있다.
+'index', // 그리고 인덱스 파일이 온다
+'object',
+// 그리고 정의되지 않은 내부와 외부 모듈 타입들이 온다.
+]
+
+```
+
+이런식으로 배열원소를 가진 배열로 정의할 수 있다. 원소가 배열일지라도 그 배열은 역시 `string`만으로 구성되어야한다.
+원소가 배열인 경우에는 같은 그룹들끼리 동일한 순위를 줄 수가 있다.
+
+eslint설정의 `rules`에 다음과 같은 형식으로 항목을 추가함으로써 order적용이 가능하다
+
+```javascript
+"import/order": ["error", {"groups": ["index", "sibling", "parent", "internal", "external", "builtin", "object", "type"]}]
+```
+
+## 마무리
+
+사용해본 결과 바로 거의 대부분의 파일들에서 린트에러를 나타내는 빨간 지렁이줄들이 생겼다.
+그리고 린트 규칙에 맞게 자동 수정을 하면 내가 적용해놓은 모듈 타입의 순서에 따라 import 구문들을 정렬하는 결과를 볼 수 있다.
+모듈 타입의 순서에 대해서는 좀 더 고민이 필요하다고 생각되지만 우선 이러한 기능에 대해서
+프로젝트에 적용한 결과를 팀원들에게 공유하자 반응이 좋았다.
+다음번 회의에서 팀원들과 논의를 통해 프로젝트의 코딩 컨벤션으로 정할 모듈 타입의 순서에 대해서 더 구체적으로 정해보기로 했다.
+만약 import 구문에 관한 코딩 컨벤션을 필요로 한다면 `eslint-plugin-import`을 사용해보는 것을 적극 추천한다.
+
+## 참고
+
+https://github.com/import-js/eslint-plugin-import
