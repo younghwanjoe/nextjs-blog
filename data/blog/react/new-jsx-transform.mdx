@@ -1,26 +1,26 @@
 ---
-title: React 17에서 import react from 'React' 구문 삭제하기
+title: React 17에서 import React from 'react' 구문 삭제하기
 date: '2022-03-04'
 lastmod: '2022-03-04'
 tags: ['react']
 draft: false
-summary: 리액트 17버전부터는 기본적으로 JSX를 사용하기 위한 React Import 가 필요가 없어졌습니다. 그러니 삭제하는 작업을 해줍시다.
+summary: 리액트 17버전부터는 기본적으로 JSX를 사용하기 위한 Import React 가 필요가 없어졌습니다. 그러니 삭제하는 작업을 해줍시다.
 authors: ['default']
 ---
 
-# React 17부터의 JSX 트랜스폼에는 `import react from 'React'`가 필요없어집니다.
+# React 17부터의 JSX 트랜스폼에는 `import React from 'react'`가 필요없어집니다.
 
 React의 JSX구문을 사용하기 위해서는 React.createElement를 사용하여
-ReactElement로 `트랜스폼`해주는 `import react from 'React'`를 필수적으로 넣어줘야 하는데요.
+ReactElement로 `트랜스폼`해주는 `import React from 'react'`를 필수적으로 넣어줘야 하는데요.
 React 17부터는 필요없습니다.
 
 React 18이 나오는 시점에서 좀 뜬금없을 수 있지만 이 사실을 모르고 있던 저는
-프로젝트에서 꼬박꼬박 각 컴포넌트 파일의 최상단에 `import react from 'React'`를
+프로젝트에서 꼬박꼬박 각 컴포넌트 파일의 최상단에 `import React from 'react'`를
 넣어주고 있었습니다.
 
 ## React 17에서 JSX 트랜스폼의 방식이 바뀐 이유
 
-앞서 얘기한것처럼 React 17부터는 `import react from 'React'`구문 없이도 JSX문법을 사용할 수 있습니다.
+앞서 얘기한것처럼 React 17부터는 `import React from 'react'`구문 없이도 JSX문법을 사용할 수 있습니다.
 반대로 React 17이전 버전에서는 위 구문이 있어야 JSX 문법을 사용할 수 있습니다.
 이렇게 말이죠.
 
@@ -49,7 +49,7 @@ function App() {
 ### eslint 설정 변경
 
 eslint 설정에 `rules`를 추가해야했는데요, 저의 경우에는 이 eslint규칙이 사실상
-React 17부터는 JSX를 사용하기 위해 `import react from 'React'`구문이 별도로 필요없어졌음에도 불구하고
+React 17부터는 JSX를 사용하기 위해 `import React from 'react'`구문이 별도로 필요없어졌음에도 불구하고
 계속 사용하고 있던 원인이 되었습니다.
 
 기존에 설정되어있던 eslint rule에서는 위 구문없이 JSX를 사용할경우 lint error를 발생시켰기 때문입니다.
