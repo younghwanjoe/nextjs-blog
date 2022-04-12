@@ -16,27 +16,37 @@ authors: ['default']
 import구문의 순서를 정의할 수 있는 규칙을 설정할 수 있는 기능을 소개한다.
 
 ```typescript
-import { useContext, useEffect } from 'react'
-import styled, { keyframes } from 'styled-components'
-import cx from 'classnames'
-import { ModalContext } from '@/components/basic/PreviewSection/context'
-import { numberFormatter, scaler } from '@/utils'
+import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router'
+import { useSearchParams } from 'react-router-dom'
+import auth from '@/api/auth'
 
-import Card from '@/components/basic/Card'
-import Avatar from '@/components/basic/Avatar'
-import IconButton from '@/components/basic/IconButton'
+import { useSnackbar } from '@/hooks/useSnackbar'
+import {
+  fetchAuth,
+  fetchEmailLogin,
+  getAgreement,
+  emailVerificationRenew,
+  emailRegister,
+} from '../slice/accountSlice'
+import { saveLoginInfo, getLoginInfo } from '@flow/shared/src/module/auth/module'
+import {
+  sendResetPasswordEmail,
+  resetPasswordConfirm,
+  logout,
+  ssoRegister,
+  putAgreement,
+} from '@/features/account/slice/accountSlice'
+import { SocialType, ServiceID } from '@flow/shared/src/module/auth/interface/Auth'
 
-import thumbUpIcon from '@/assets/icons/icon-thumb-up-dark-gray.svg'
-import thumbUpCircleIcon from '@/assets/icons/icon-thumb-up-circle-dark.svg'
+import { useAccountContext, CurrentPage } from '../context'
+import { useAppDispatch, useAppSelector } from '@/store/hook'
+import { toggleAccountDialog } from '@/store/appSlice'
 
-import { SpaceCategories, SpaceSimple } from '@/interface/Space'
-
-import tw from 'twin.macro'
-import Icon from '@/components/basic/Icon'
-import Device, { DeviceType } from '@/styles/Device'
+import { emailRule, passwordRule } from '@flow/shared/src/module/auth/utils'
 ```
 
-위 코드를 보자. 실제로 프로젝트에 사용되고 있는 코드였다.
+위는 실제로 프로젝트에서 마주친 코드이다.
 import 구문이 많다. 리액트 hook을 위한 import 구문부터 styled-component등의 거의 반드시 사용하게 되는 라이브러리들과
 프로젝트 내부의 모듈들, 그리고 asset파일들도 있다.
 
@@ -111,6 +121,8 @@ extends:
 
 ## order 규칙 설명
 
+### #groups
+
 [order 규칙](https://github.com/import-js/eslint-plugin-import/blob/main/docs/rules/order.md)에서 어떤 기준으로 import 구문들에 대한 컨벤션이 적용되는지 확인해봤다.
 order의 기준이 되는 타입들은 총 8가지가 있다.
 
@@ -122,27 +134,26 @@ groups = ['builtin', 'external', 'internal', 'parent', 'sibling', 'index', 'obje
 
 ```typescript
 // 1. 노드의 "빌트인" 모듈들(node "builtin" modules)
-import fs from 'fs';
-import path from 'path';
+import fs from 'fs'
+import path from 'path'
 // 2. "외부" 모듈들("external" modules)
-import \_ from 'lodash';
-import chalk from 'chalk';
+import _ from 'lodash'
+import chalk from 'chalk'
 // 3. "내부" 모듈들("internal" modules)
 // (만약 path나 웹팩의 내부 경로를 다르게 설정했을 경우)
-import foo from 'src/foo';
+import foo from 'src/foo'
 // 4. "부모" 디렉토리에서 가져온 모듈들(modules from a "parent" directory)
-import foo from '../foo';
-import qux from '../../foo/qux';
+import foo from '../foo'
+import qux from '../../foo/qux'
 // 5. 형제의 디렉토리나 같은 디렉토리에서 가져온 "형제" 모듈들("sibling" modules from the same or a sibling's directory
-import bar from './bar';
-import baz from './bar/baz';
+import bar from './bar'
+import baz from './bar/baz'
 // 6. 현재 디렉토리의 "인덱스" 파일("index" of the current directory)
-import main from './';
+import main from './'
 // 7. "오브젝트" import(타입스크립트에서만 가능) ("object"-imports (only available in TypeScript))
-import log = console.log;
+import log = console.log
 // 8. "타입" import (타입스크립트에서만 가능) ("type" imports (only available in Flow and TypeScript))
-import type { Foo } from 'foo';
-
+import type { Foo } from 'foo'
 ```
 
 그룹에 대한 정의는 `string`이나 `[string]`으로 이루어진 배열로 정의한다.
@@ -170,13 +181,181 @@ eslint설정의 `rules`에 다음과 같은 형식으로 항목을 추가함으�
 "import/order": ["error", {"groups": ["index", "sibling", "parent", "internal", "external", "builtin", "object", "type"]}]
 ```
 
+### #rules 예시
+
+```javscript
+'import/order': ['error',
+      {
+        'newlines-between': 'always',
+        groups: [
+          'builtin',
+          'external',
+          'internal',
+          'parent',
+          'sibling',
+          'index',
+          'object',
+          'type',
+        ],
+        pathGroups: [
+          {
+            pattern: '@flow/**',
+            group: 'external',
+            position: 'before',
+          },
+          {
+            pattern: '@/api/**',
+            group: 'internal',
+            position: 'before',
+          },
+          {
+            pattern: '@/modules/**',
+            group: 'internal',
+            position: 'before',
+          },
+          {
+            pattern: '@/hooks/**',
+            group: 'internal',
+            position: 'before',
+          },
+          {
+            pattern: '@/store/**',
+            group: 'internal',
+            position: 'before',
+          },
+          {
+            pattern: '@/components/**',
+            group: 'internal',
+            position: 'before',
+          },
+          {
+            pattern: '@/features/**',
+            group: 'internal',
+            position: 'before',
+          },
+          {
+            pattern: '@/router/**',
+            group: 'internal',
+            position: 'before',
+          },
+          {
+            pattern: '@/styles/**',
+            group: 'internal',
+            position: 'before',
+          },
+          {
+            pattern: '@/utils/**',
+            group: 'internal',
+            position: 'before',
+          },
+          {
+            pattern: '@/assets/**',
+            group: 'internal',
+            position: 'before',
+          },
+          {
+            pattern: '@/types/**',
+            group: 'internal',
+            position: 'before',
+          },
+          {
+            pattern: '@/interface/**',
+            group: 'internal',
+            position: 'before',
+          },
+        ],
+          pathGroupsExcludedImportTypes: ['builtin'],
+    }
+```
+
+실제 프로젝트에 적용한 eslint-plugim-import의 rules 코드이다.
+
+### #pathGroups
+
+파일 경로에 따라 groups에 대한 타입을 지정할 수 있다.
+
+설정순서에 따라 order가 적용된다.
+
+```
+{
+  "import/order": ["error", {
+    "pathGroups": [
+      {
+        "pattern": "~/**",
+        "group": "external"
+      }
+    ]
+  }]
+}
+```
+
+pathGroups배열의 객체는 내가지 프로퍼티를 설정할 수 있다.
+
+- pattern(required, string): 매칭되는 패턴
+- patternOptions(optional, object): 매칭에 대한 옵션
+- group(required, string): 매칭되는 그룹
+- position(optional, string): 매칭되는 그룹의 앞 혹은 뒤에 위치할것인지 설정
+
+### #newlines-between
+
+`import` 그룹간의 줄간격을 설정할 수 있다.
+
+옵션은 네가지이다.
+
+ignore: import그룹간의 줄간격에 대해 무시한다
+
+always: import 그룹간에 반드시 최소 한줄의 줄간격을 강제한다
+
+always-and-inside-groups: always와 같으나 import 그룹안에서 줄간격이 허용된다
+
+never: import 구문 전체 영역에서 줄간격이 허용되지 않는다
+
 ## 마무리
 
-사용해본 결과 바로 거의 대부분의 파일들에서 린트에러를 나타내는 빨간 지렁이줄들이 생겼다.
-그리고 린트 규칙에 맞게 자동 수정을 하면 내가 적용해놓은 모듈 타입의 순서에 따라 import 구문들을 정렬하는 결과를 볼 수 있다.
-모듈 타입의 순서에 대해서는 좀 더 고민이 필요하다고 생각되지만 우선 이러한 기능에 대해서
+이 글의 서두에서 예시로 들었던 코드들에 eslint-plugin-import의 order를 사용해 정렬한 결과다.
+
+```javascript
+import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router'
+import { useSearchParams } from 'react-router-dom'
+
+import { saveLoginInfo, getLoginInfo } from '@flow/shared/src/module/auth/module'
+import { SocialType, ServiceID } from '@flow/shared/src/module/auth/interface/Auth'
+import { emailRule, passwordRule } from '@flow/shared/src/module/auth/utils'
+
+import auth from '@/api/auth'
+
+import { useSnackbar } from '@/hooks/useSnackbar'
+
+import { useAppDispatch, useAppSelector } from '@/store/hook'
+import { toggleAccountDialog } from '@/store/appSlice'
+
+import {
+  sendResetPasswordEmail,
+  resetPasswordConfirm,
+  logout,
+  ssoRegister,
+  putAgreement,
+} from '@/features/account/slice/accountSlice'
+
+import {
+  fetchAuth,
+  fetchEmailLogin,
+  getAgreement,
+  emailVerificationRenew,
+  emailRegister,
+} from '../slice/accountSlice'
+import { useAccountContext, CurrentPage } from '../context'
+```
+
+린트 규칙에 맞게 자동 수정을 하면 내가 적용해놓은 모듈 타입의 순서에 따라 import 구문들을 정렬하는 결과를 볼 수 있다.
+그루핑한 결과에따라 import 구문들이 정렬되었고, 각 그룹마다 line을 적용하여 시각적으로 구분이 명확해지는 효과가 있다.
+무엇보다 import구문의 순서에 대해 고민할 필요없이 설정해놓은 린트 규칙에 따라 알아서 적용이 되니 편리하다.
+
+모듈 타입의 순서에 대해서는 좀 더 고민이 필요하다고 생각되지만 우선 eslint-plugin-import 기능을 소개하고
 프로젝트에 적용한 결과를 팀원들에게 공유하자 반응이 좋았다.
-다음번 회의에서 팀원들과 논의를 통해 프로젝트의 코딩 컨벤션으로 정할 모듈 타입의 순서에 대해서 더 구체적으로 정해보기로 했다.
+다만 프로젝트 코드들이 전반적으로 수정되는것이 불가피하므로 적당한 타이밍에 일괄적으로 적용하기로 했다.
+
 만약 import 구문에 관한 코딩 컨벤션을 필요로 한다면 `eslint-plugin-import`을 사용해보는 것을 적극 추천한다.
 
 ## 참고
